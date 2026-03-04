@@ -1,0 +1,15 @@
+# Archivos de entorno y contraseñas
+.env
+.env.*
+
+# Carpetas de subidas de usuarios (Evidencias)
+/uploads/
+/public/evidencias/
+
+# Dependencias (Por si usas Node o PHP)
+node_modules/
+vendor/
+
+# Archivos basura del sistema operativo
+.DS_Store
+Thumbs.db
