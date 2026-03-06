@@ -13,3 +13,6 @@ vendor/
 # Archivos basura del sistema operativo
 .DS_Store
 Thumbs.db
+
+# Logs y bases de datos
+backend/uploads/
