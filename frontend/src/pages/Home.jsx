@@ -10,7 +10,6 @@ export default function Home() {
     fetch('http://localhost:3001/api/noticias')
       .then(res => res.json())
       .then(datos => {
-        // REGLA DE NEGOCIO: Solo 'Publicadas' y máximo 3
         const noticiasPublicadas = datos
           .filter(n => n.estatus === 'Publicado')
           .slice(0, 3);
@@ -22,7 +21,6 @@ export default function Home() {
     fetch('http://localhost:3001/api/nodess')
       .then(res => res.json())
       .then(datos => {
-        // REGLA DE NEGOCIO: Solo 'Activas' y máximo 6
         const empresasActivas = datos
           .filter(e => e.estatus === 'Activa' || !e.estatus)
           .slice(0, 6);
@@ -34,9 +32,8 @@ export default function Home() {
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-12">
       
-      {/* Hero Section (El cuadro gigante de bienvenida) */}
+      {/* Hero Section */}
       <div className="bg-gradient-to-r from-blue-900 to-blue-700 rounded-2xl p-12 text-center text-white shadow-xl relative overflow-hidden">
-        {/* Decoración de fondo */}
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
         
         <div className="relative z-10">
@@ -44,16 +41,20 @@ export default function Home() {
           <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto font-light">
             Plataforma integral para el desarrollo de emprendimientos, capacitación y vinculación empresarial NODESS.
           </p>
-          <button className="bg-green-500 hover:bg-green-400 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105">
+          
+          {/* CORRECCIÓN: Botón ahora es un Link al registro */}
+          <Link 
+            to="/registro-mercadito" 
+            className="inline-block bg-green-500 hover:bg-green-400 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105"
+          >
             Registro al Mercadito ➔
-          </button>
+          </Link>
         </div>
       </div>
 
-      {/* Las 3 Secciones Dinámicas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
-        {/* SECCIÓN 1: Últimas Noticias (Dinámico) */}
+        {/* SECCIÓN 1: Últimas Noticias */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
           <h2 className="text-xl font-bold text-blue-900 mb-4 border-b pb-2 flex justify-between items-center">
             <span>📰 Últimas Noticias</span>
@@ -63,7 +64,12 @@ export default function Home() {
           <div className="space-y-4 flex-1">
             {noticias.length > 0 ? (
               noticias.map(noticia => (
-                <div key={noticia.id_noticia} className="flex gap-3 group cursor-pointer">
+                /* CORRECCIÓN: Envuelto en Link para ir al detalle */
+                <Link 
+                  to={`/noticia/${noticia.id_noticia}`} 
+                  key={noticia.id_noticia} 
+                  className="flex gap-3 group cursor-pointer"
+                >
                   <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
                     {noticia.imagen_portada ? (
                       <img src={`http://localhost:3001${noticia.imagen_portada}`} alt="Noticia" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
@@ -79,7 +85,7 @@ export default function Home() {
                       {new Date(noticia.fecha_publicacion).toLocaleDateString()}
                     </p>
                   </div>
-                </div>
+                </Link>
               ))
             ) : (
               <p className="text-sm text-gray-500 text-center py-4">No hay noticias publicadas.</p>
@@ -87,7 +93,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* SECCIÓN 2: Cursos (Próximamente Dinámico) */}
+        {/* SECCIÓN 2: Cursos */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
           <h2 className="text-xl font-bold text-blue-900 mb-4 border-b pb-2">🎓 Cursos Disponibles</h2>
           <div className="space-y-3 flex-1">
@@ -102,7 +108,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* SECCIÓN 3: Empresas NODESS (Dinámico) */}
+        {/* SECCIÓN 3: Empresas NODESS */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
           <h2 className="text-xl font-bold text-blue-900 mb-4 border-b pb-2">🤝 Red NODESS</h2>
           <p className="text-sm text-gray-500 mb-4">Empresas vinculadas a nuestra red de economía social.</p>

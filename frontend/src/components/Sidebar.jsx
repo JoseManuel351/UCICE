@@ -23,6 +23,9 @@ export default function Sidebar() {
         <Link to="/admin/noticias" className="w-full flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
             📰 Noticias
         </Link>
+        <Link to="/admin/mercadito" className="w-full flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+          🏪 Mercadito
+        </Link>
       </nav>
     </aside>
   );

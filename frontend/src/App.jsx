@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Mercadito from './pages/Mercadito';
 import NODESS from './pages/Nodess';
 import Noticias from './pages/Noticias';
+import RegistroMercadito from './pages/RegistroMercadito';
 
 function App() {
   return (
@@ -14,7 +15,8 @@ function App() {
       <Routes>
         {/* EL MUNDO PÚBLICO */}
         <Route path="/" element={<PublicLayout />}>
-          <Route index element={<Home />} />
+        <Route index element={<Home />} />
+        <Route path="registro-mercadito" element={<RegistroMercadito />} />
           {/* Aquí irán después las rutas de /noticias y /cursos públicos */}
         </Route>
 
