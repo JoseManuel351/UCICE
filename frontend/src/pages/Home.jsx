@@ -4,16 +4,14 @@ import { Link } from 'react-router-dom';
 export default function Home() {
   const [noticias, setNoticias] = useState([]);
   const [empresas, setEmpresas] = useState([]);
+  const [cursos, setCursos] = useState([]); // NUEVO: Estado para los cursos
 
   useEffect(() => {
     // 1. Descargar y filtrar Noticias
     fetch('http://localhost:3001/api/noticias')
       .then(res => res.json())
       .then(datos => {
-        // REGLA DE NEGOCIO: Solo 'Publicadas' y máximo 3
-        const noticiasPublicadas = datos
-          .filter(n => n.estatus === 'Publicado')
-          .slice(0, 3);
+        const noticiasPublicadas = datos.filter(n => n.estatus === 'Publicado').slice(0, 3);
         setNoticias(noticiasPublicadas);
       })
       .catch(error => console.error("Error al cargar noticias:", error));
@@ -22,21 +20,27 @@ export default function Home() {
     fetch('http://localhost:3001/api/nodess')
       .then(res => res.json())
       .then(datos => {
-        // REGLA DE NEGOCIO: Solo 'Activas' y máximo 6
-        const empresasActivas = datos
-          .filter(e => e.estatus === 'Activa' || !e.estatus)
-          .slice(0, 6);
+        const empresasActivas = datos.filter(e => e.estatus === 'Activa' || !e.estatus).slice(0, 6);
         setEmpresas(empresasActivas);
       })
       .catch(error => console.error("Error al cargar NODESS:", error));
+
+    // 3. NUEVO: Descargar y filtrar Cursos
+    fetch('http://localhost:3001/api/cursos')
+      .then(res => res.json())
+      .then(datos => {
+        // REGLA DE NEGOCIO: Solo mostrar los 'Publicados' (máximo 3 en el Home)
+        const cursosPublicados = datos.filter(c => c.estatus === 'Publicado').slice(0, 3);
+        setCursos(cursosPublicados);
+      })
+      .catch(error => console.error("Error al cargar cursos:", error));
   }, []);
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-12">
       
-      {/* Hero Section (El cuadro gigante de bienvenida) */}
+      {/* Hero Section */}
       <div className="bg-gradient-to-r from-blue-900 to-blue-700 rounded-2xl p-12 text-center text-white shadow-xl relative overflow-hidden">
-        {/* Decoración de fondo */}
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
         
         <div className="relative z-10">
@@ -54,10 +58,9 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Las 3 Secciones Dinámicas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
-        {/* SECCIÓN 1: Últimas Noticias (Dinámico) */}
+        {/* SECCIÓN 1: Últimas Noticias */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
           <h2 className="text-xl font-bold text-blue-900 mb-4 border-b pb-2 flex justify-between items-center">
             <span>📰 Últimas Noticias</span>
@@ -95,22 +98,42 @@ export default function Home() {
           </div>
         </div>
 
-        {/* SECCIÓN 2: Cursos (Próximamente Dinámico) */}
+        {/* SECCIÓN 2: Cursos Disponibles (AHORA ES DINÁMICO) */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
           <h2 className="text-xl font-bold text-blue-900 mb-4 border-b pb-2">🎓 Cursos Disponibles</h2>
           <div className="space-y-3 flex-1">
-            <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
-              <h3 className="font-bold text-blue-800 text-sm">Economía Social y Solidaria</h3>
-              <p className="text-xs text-blue-600 mt-1">Inscripciones abiertas</p>
-            </div>
-            <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
-              <h3 className="font-bold text-blue-800 text-sm">Liderazgo Tecnológico</h3>
-              <p className="text-xs text-blue-600 mt-1">Inicia el próximo mes</p>
-            </div>
+            {cursos.length > 0 ? (
+              cursos.map(curso => (
+                <div key={curso.id_curso} className="p-4 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition-colors">
+                  <h3 className="font-bold text-blue-800 text-sm line-clamp-1" title={curso.titulo}>{curso.titulo}</h3>
+                  <p className="text-xs text-blue-600 mt-1 mb-2 line-clamp-2">{curso.descripcion}</p>
+                  
+                  <div className="flex justify-between items-center mt-3 pt-2 border-t border-blue-200">
+                    <span className="text-[10px] font-bold text-blue-700 uppercase">
+                      Inicia: {curso.fecha_inicio ? new Date(curso.fecha_inicio).toLocaleDateString() : 'Por definir'}
+                    </span>
+                    
+                    {/* Botón de inscripción si el curso tiene enlace */}
+                    {curso.enlace_inscripcion && (
+                      <a 
+                        href={curso.enlace_inscripcion} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded shadow-sm font-bold transition-transform active:scale-95"
+                      >
+                        Inscribirme
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500 text-center py-4">No hay cursos disponibles por el momento.</p>
+            )}
           </div>
         </div>
 
-        {/* SECCIÓN 3: Empresas NODESS (Dinámico) */}
+        {/* SECCIÓN 3: Empresas NODESS */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
           <h2 className="text-xl font-bold text-blue-900 mb-4 border-b pb-2">🤝 Red NODESS</h2>
           <p className="text-sm text-gray-500 mb-4">Empresas vinculadas a nuestra red de economía social.</p>

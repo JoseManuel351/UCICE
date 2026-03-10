@@ -26,6 +26,9 @@ export default function Sidebar() {
         <Link to="/admin/mercadito" className="w-full flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
           🏪 Mercadito
         </Link>
+        <Link to="/admin/cursos" className="w-full flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+          🎓 Cursos
+        </Link> 
       </nav>
     </aside>
   );

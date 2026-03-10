@@ -230,6 +230,47 @@ app.get('/api/nodess/:id', (req, res) => {
     });
 });
 
+// ==========================================
+// RUTAS: CURSOS DE CAPACITACIÓN
+// ==========================================
+
+// 1. LEER: Obtener todos los cursos
+app.get('/api/cursos', (req, res) => {
+    db.query('SELECT * FROM cursos_capacitacion ORDER BY fecha_creacion DESC', (err, results) => {
+        if (err) return res.status(500).json({ error: 'Error al cargar los cursos' });
+        res.json(results);
+    });
+});
+
+// 2. CREAR: Registrar un nuevo curso
+app.post('/api/cursos', (req, res) => {
+    const { titulo, descripcion, fecha_inicio, enlace_inscripcion, estatus } = req.body;
+    const querySQL = `INSERT INTO cursos_capacitacion (titulo, descripcion, fecha_inicio, enlace_inscripcion, estatus) VALUES (?, ?, ?, ?, ?)`;
+    
+    db.query(querySQL, [titulo, descripcion, fecha_inicio || null, enlace_inscripcion, estatus || 'Borrador'], (err) => {
+        if (err) return res.status(500).json({ error: 'Error al guardar el curso' });
+        res.json({ mensaje: '¡Curso registrado con éxito!' });
+    });
+});
+
+// 3. ACTUALIZAR: Editar un curso existente
+app.put('/api/cursos/:id', (req, res) => {
+    const { titulo, descripcion, fecha_inicio, enlace_inscripcion, estatus } = req.body;
+    const querySQL = `UPDATE cursos_capacitacion SET titulo = ?, descripcion = ?, fecha_inicio = ?, enlace_inscripcion = ?, estatus = ? WHERE id_curso = ?`;
+    
+    db.query(querySQL, [titulo, descripcion, fecha_inicio || null, enlace_inscripcion, estatus, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: 'Error al actualizar el curso' });
+        res.json({ mensaje: 'Curso actualizado correctamente.' });
+    });
+});
+
+// 4. BORRAR: Eliminar un curso
+app.delete('/api/cursos/:id', (req, res) => {
+    db.query('DELETE FROM cursos_capacitacion WHERE id_curso = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: 'Error al eliminar el curso' });
+        res.json({ mensaje: 'Curso eliminado del sistema.' });
+    });
+});
 
 // Encender servidor
 const PORT = process.env.PORT || 3001;

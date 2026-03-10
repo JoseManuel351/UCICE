@@ -9,6 +9,7 @@ import NODESS from './pages/Nodess';
 import Noticias from './pages/Noticias';
 import RegistroMercadito from './pages/RegistroMercadito';
 import EmpresaDetalle from './pages/EmpresaDetalle';
+import Cursos from './pages/Cursos';
 
 function App() {
   return (
@@ -16,9 +17,20 @@ function App() {
       <Routes>
         {/* EL MUNDO PÚBLICO */}
         <Route path="/" element={<PublicLayout />}>
-        <Route index element={<Home />} />
-        <Route path="registro-mercadito" element={<RegistroMercadito />} />
-        <Route path="empresa/:id" element={<EmpresaDetalle />} />
+          <Route index element={<Home />} />
+          <Route path="registro-mercadito" element={<RegistroMercadito />} />
+          <Route path="empresa/:id" element={<EmpresaDetalle />} />
+          <Route path="cursos" element={<Cursos />} />
+        </Route>
+
+        {/* EL MUNDO ADMINISTRADOR */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="mercadito" element={<Mercadito />} />
+          <Route path="nodess" element={<NODESS />} />
+          <Route path="noticias" element={<Noticias />} />
+          <Route path="cursos" element={<Cursos />} />
+          
           {/* Aquí irán después las rutas de /noticias y /cursos públicos */}
         </Route>
 
