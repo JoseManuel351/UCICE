@@ -4,6 +4,8 @@ const cors = require('cors');
 const mysql = require('mysql2');
 const multer = require('multer');
 const path = require('path');
+const jwt = require('jsonwebtoken'); 
+const bcrypt = require('bcryptjs');  
 
 const app = express();
 
@@ -33,6 +35,80 @@ db.connect((err) => {
 });
 
 // ==========================================
+// RUTAS: SEGURIDAD Y LOGIN (CON ROLES)
+// ==========================================
+const JWT_SECRET = process.env.JWT_SECRET || 'ucice_super_secreto_2026';
+
+// 1. RUTA TEMPORAL: Crear al primer Administrador
+app.post('/api/auth/crear-admin-maestro', async (req, res) => {
+    try {
+        const { nombre_completo, correo, password_plano } = req.body;
+        const hash = await bcrypt.hash(password_plano, 10);
+        
+        db.query(`INSERT INTO usuarios (nombre_completo, correo, password, rol) VALUES (?, ?, ?, 'Admin')`, 
+        [nombre_completo, correo, hash], (err) => {
+            if (err) return res.status(500).json({ error: 'El correo ya existe.' });
+            res.json({ mensaje: 'Admin maestro creado con éxito.' });
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al encriptar' });
+    }
+});
+
+// 2. NUEVA RUTA: Registro Público con Selección de Perfil
+app.post('/api/auth/registro', async (req, res) => {
+    try {
+        const { nombre_completo, correo, password_plano, rol } = req.body;
+        
+        // FILTRO DE SEGURIDAD ESTRICTO: Bloqueamos cualquier intento de inyectar 'Admin'
+        const rolSeguro = (rol === 'Admin' || !rol) ? 'Público General' : rol;
+
+        // Encriptamos la contraseña
+        const hash = await bcrypt.hash(password_plano, 10);
+        
+        // Guardamos en MySQL con el rol que el usuario eligió (o el filtrado)
+        db.query(`INSERT INTO usuarios (nombre_completo, correo, password, rol) VALUES (?, ?, ?, ?)`, 
+        [nombre_completo, correo, hash, rolSeguro], (err) => {
+            if (err) {
+                if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Este correo ya está registrado.' });
+                return res.status(500).json({ error: 'Error al registrar.' });
+            }
+            res.json({ mensaje: '¡Registro exitoso! Ya puedes iniciar sesión.' });
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// 3. RUTA OFICIAL: Iniciar Sesión (Login) Actualizada
+app.post('/api/auth/login', (req, res) => {
+    const { correo, password } = req.body;
+
+    db.query('SELECT * FROM usuarios WHERE correo = ?', [correo], async (err, results) => {
+        if (err) return res.status(500).json({ error: 'Error en el servidor' });
+        if (results.length === 0) return res.status(401).json({ error: 'Credenciales incorrectas' });
+
+        const usuario = results[0];
+        
+        const esValida = await bcrypt.compare(password, usuario.password);
+        if (!esValida) return res.status(401).json({ error: 'Credenciales incorrectas' });
+
+        // AHORA EL GAFETE INCLUYE EL ROL DEL USUARIO
+        const token = jwt.sign(
+            { id: usuario.id_usuario, nombre: usuario.nombre_completo, rol: usuario.rol }, 
+            JWT_SECRET, 
+            { expiresIn: '8h' }
+        );
+
+        res.json({ 
+            mensaje: 'Bienvenido', 
+            token, 
+            usuario: { id: usuario.id_usuario, nombre: usuario.nombre_completo, rol: usuario.rol } 
+        });
+    });
+});
+
+// ==========================================
 // RUTAS: CATÁLOGOS GLOBALES
 // ==========================================
 app.get('/api/carreras', (req, res) => {
@@ -43,10 +119,45 @@ app.get('/api/carreras', (req, res) => {
 });
 
 // ==========================================
+// RUTAS: CURSOS DE CAPACITACIÓN
+// ==========================================
+app.get('/api/cursos', (req, res) => {
+    db.query('SELECT * FROM cursos_capacitacion ORDER BY fecha_creacion DESC', (err, results) => {
+        if (err) return res.status(500).json({ error: 'Error al cargar los cursos' });
+        res.json(results);
+    });
+});
+
+app.post('/api/cursos', (req, res) => {
+    const { titulo, descripcion, fecha_inicio, enlace_inscripcion, estatus } = req.body;
+    const querySQL = `INSERT INTO cursos_capacitacion (titulo, descripcion, fecha_inicio, enlace_inscripcion, estatus) VALUES (?, ?, ?, ?, ?)`;
+    
+    db.query(querySQL, [titulo, descripcion, fecha_inicio || null, enlace_inscripcion, estatus || 'Borrador'], (err) => {
+        if (err) return res.status(500).json({ error: 'Error al guardar el curso' });
+        res.json({ mensaje: '¡Curso registrado con éxito!' });
+    });
+});
+
+app.put('/api/cursos/:id', (req, res) => {
+    const { titulo, descripcion, fecha_inicio, enlace_inscripcion, estatus } = req.body;
+    const querySQL = `UPDATE cursos_capacitacion SET titulo = ?, descripcion = ?, fecha_inicio = ?, enlace_inscripcion = ?, estatus = ? WHERE id_curso = ?`;
+    
+    db.query(querySQL, [titulo, descripcion, fecha_inicio || null, enlace_inscripcion, estatus, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: 'Error al actualizar el curso' });
+        res.json({ mensaje: 'Curso actualizado correctamente.' });
+    });
+});
+
+app.delete('/api/cursos/:id', (req, res) => {
+    db.query('DELETE FROM cursos_capacitacion WHERE id_curso = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: 'Error al eliminar el curso' });
+        res.json({ mensaje: 'Curso eliminado del sistema.' });
+    });
+});
+
+// ==========================================
 // RUTAS: MERCADITO
 // ==========================================
-
-// 1. LEER TODAS LAS SOLICITUDES (Admin)
 app.get('/api/mercadito', (req, res) => {
     const querySQL = `
         SELECT 
@@ -71,7 +182,6 @@ app.get('/api/mercadito', (req, res) => {
     });
 });
 
-// 2. REGISTRO PÚBLICO: SOLICITUD DEL ALUMNO (POST)
 app.post('/api/mercadito/registro', (req, res) => {
     const { 
         id_carrera, nombre_completo, correo_estudiante, numero_contacto, 
@@ -79,31 +189,25 @@ app.post('/api/mercadito/registro', (req, res) => {
         cantidad_mesas, requiere_electricidad, lleva_estructura, descripcion_estructura 
     } = req.body;
 
-    // A. Estudiante
     const sqlEst = `INSERT INTO estudiantes (id_carrera, nombre_completo, correo_estudiante, numero_contacto) VALUES (?, ?, ?, ?)`;
     db.query(sqlEst, [id_carrera, nombre_completo, correo_estudiante, numero_contacto], (err, resEst) => {
-        if (err) return res.status(500).json({ error: 'Error al registrar los datos del estudiante.' });
-        
+        if (err) return res.status(500).json({ error: 'Error al registrar estudiante' });
         const idEstudiante = resEst.insertId;
 
-        // B. Emprendimiento
         const sqlEmp = `INSERT INTO emprendimientos (id_estudiante, nombre_emprendimiento, tipo_producto_servicio, descripcion_venta, redes_sociales) VALUES (?, ?, ?, ?, ?)`;
         db.query(sqlEmp, [idEstudiante, nombre_emprendimiento, tipo_producto_servicio, descripcion_venta, redes_sociales], (err, resEmp) => {
-            if (err) return res.status(500).json({ error: 'Error al registrar el emprendimiento.' });
-            
+            if (err) return res.status(500).json({ error: 'Error al registrar emprendimiento' });
             const idEmprendimiento = resEmp.insertId;
 
-            // C. Solicitud Mercadito
             const sqlSol = `INSERT INTO solicitudes_mercadito (id_emprendimiento, cantidad_mesas, requiere_electricidad, lleva_estructura, descripcion_estructura, estatus_solicitud) VALUES (?, ?, ?, ?, ?, 'Pendiente')`;
             db.query(sqlSol, [idEmprendimiento, cantidad_mesas, requiere_electricidad, lleva_estructura, descripcion_estructura], (err) => {
-                if (err) return res.status(500).json({ error: 'Error al registrar la logística de la solicitud.' });
+                if (err) return res.status(500).json({ error: 'Error al registrar logística' });
                 res.json({ mensaje: 'Solicitud enviada con éxito' });
             });
         });
     });
 });
 
-// 3. APROBAR / RECHAZAR SOLICITUD (PUT)
 app.put('/api/mercadito/aprobar/:id', (req, res) => {
     db.query("UPDATE solicitudes_mercadito SET estatus_solicitud = 'Aprobada' WHERE id_solicitud = ?", [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: 'Error al actualizar' });
@@ -123,8 +227,21 @@ app.put('/api/mercadito/rechazar/:id', (req, res) => {
 // ==========================================
 app.get('/api/nodess', (req, res) => {
     db.query('SELECT * FROM empresas_nodess ORDER BY fecha_registro DESC', (err, results) => {
-        if (err) return res.status(500).json({ error: 'Error del servidor al obtener empresas' });
+        if (err) return res.status(500).json({ error: 'Error al obtener empresas' });
         res.json(results);
+    });
+});
+
+app.get('/api/nodess/:id', (req, res) => {
+    const querySQL = `
+        SELECT id_empresa, nombre_comercial, representante, telefono, correo_contacto, direccion 
+        FROM empresas_nodess 
+        WHERE id_empresa = ? AND (estatus = 'Activa' OR estatus IS NULL)
+    `;
+    db.query(querySQL, [req.params.id], (err, results) => {
+        if (err) return res.status(500).json({ error: 'Error al cargar los datos de la empresa' });
+        if (results.length === 0) return res.status(404).json({ error: 'Empresa no encontrada o dada de baja.' });
+        res.json(results[0]);
     });
 });
 
@@ -134,7 +251,7 @@ app.post('/api/nodess', (req, res) => {
     [nombre_comercial, representante, telefono, correo_contacto, direccion], (err) => {
         if (err) {
             if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: `La empresa ya está registrada.` });
-            return res.status(500).json({ error: 'Error interno al guardar en la base de datos' });
+            return res.status(500).json({ error: 'Error interno al guardar' });
         }
         res.json({ mensaje: '¡Empresa NODESS registrada con éxito!' });
     });
@@ -210,65 +327,6 @@ app.delete('/api/noticias/:id', (req, res) => {
     db.query('DELETE FROM noticias_micrositio WHERE id_noticia = ?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: 'Error al eliminar la noticia' });
         res.json({ mensaje: 'Noticia eliminada correctamente del sistema.' });
-    });
-});
-
-// OBTENER UNA SOLA EMPRESA (Perfil Público)
-app.get('/api/nodess/:id', (req, res) => {
-    // REGLA DE SEGURIDAD: Solo traemos la empresa si su estatus es 'Activa' o nulo (por defecto activa)
-    const querySQL = `
-        SELECT id_empresa, nombre_comercial, representante, telefono, correo_contacto, direccion 
-        FROM empresas_nodess 
-        WHERE id_empresa = ? AND (estatus = 'Activa' OR estatus IS NULL)
-    `;
-    
-    db.query(querySQL, [req.params.id], (err, results) => {
-        if (err) return res.status(500).json({ error: 'Error al cargar los datos de la empresa' });
-        if (results.length === 0) return res.status(404).json({ error: 'Empresa no encontrada o dada de baja.' });
-        
-        res.json(results[0]);
-    });
-});
-
-// ==========================================
-// RUTAS: CURSOS DE CAPACITACIÓN
-// ==========================================
-
-// 1. LEER: Obtener todos los cursos
-app.get('/api/cursos', (req, res) => {
-    db.query('SELECT * FROM cursos_capacitacion ORDER BY fecha_creacion DESC', (err, results) => {
-        if (err) return res.status(500).json({ error: 'Error al cargar los cursos' });
-        res.json(results);
-    });
-});
-
-// 2. CREAR: Registrar un nuevo curso
-app.post('/api/cursos', (req, res) => {
-    const { titulo, descripcion, fecha_inicio, enlace_inscripcion, estatus } = req.body;
-    const querySQL = `INSERT INTO cursos_capacitacion (titulo, descripcion, fecha_inicio, enlace_inscripcion, estatus) VALUES (?, ?, ?, ?, ?)`;
-    
-    db.query(querySQL, [titulo, descripcion, fecha_inicio || null, enlace_inscripcion, estatus || 'Borrador'], (err) => {
-        if (err) return res.status(500).json({ error: 'Error al guardar el curso' });
-        res.json({ mensaje: '¡Curso registrado con éxito!' });
-    });
-});
-
-// 3. ACTUALIZAR: Editar un curso existente
-app.put('/api/cursos/:id', (req, res) => {
-    const { titulo, descripcion, fecha_inicio, enlace_inscripcion, estatus } = req.body;
-    const querySQL = `UPDATE cursos_capacitacion SET titulo = ?, descripcion = ?, fecha_inicio = ?, enlace_inscripcion = ?, estatus = ? WHERE id_curso = ?`;
-    
-    db.query(querySQL, [titulo, descripcion, fecha_inicio || null, enlace_inscripcion, estatus, req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: 'Error al actualizar el curso' });
-        res.json({ mensaje: 'Curso actualizado correctamente.' });
-    });
-});
-
-// 4. BORRAR: Eliminar un curso
-app.delete('/api/cursos/:id', (req, res) => {
-    db.query('DELETE FROM cursos_capacitacion WHERE id_curso = ?', [req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: 'Error al eliminar el curso' });
-        res.json({ mensaje: 'Curso eliminado del sistema.' });
     });
 });
 
