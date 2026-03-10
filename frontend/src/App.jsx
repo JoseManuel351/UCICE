@@ -8,6 +8,7 @@ import Mercadito from './pages/Mercadito';
 import NODESS from './pages/Nodess';
 import Noticias from './pages/Noticias';
 import RegistroMercadito from './pages/RegistroMercadito';
+import EmpresaDetalle from './pages/EmpresaDetalle';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/" element={<PublicLayout />}>
         <Route index element={<Home />} />
         <Route path="registro-mercadito" element={<RegistroMercadito />} />
+        <Route path="empresa/:id" element={<EmpresaDetalle />} />
           {/* Aquí irán después las rutas de /noticias y /cursos públicos */}
         </Route>
 

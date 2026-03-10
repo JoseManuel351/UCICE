@@ -26,10 +26,10 @@ const db = mysql.createConnection({
 
 db.connect((err) => {
     if (err) {
-        console.error('❌ Error fatal al conectar a la base de datos:', err.message);
+        console.error('Error fatal al conectar a la base de datos:', err.message);
         return;
     }
-    console.log('✅ Conexión exitosa a la base de datos: sistema_ucice');
+    console.log('Conexión exitosa a la base de datos: sistema_ucice');
 });
 
 // ==========================================
@@ -213,8 +213,26 @@ app.delete('/api/noticias/:id', (req, res) => {
     });
 });
 
+// OBTENER UNA SOLA EMPRESA (Perfil Público)
+app.get('/api/nodess/:id', (req, res) => {
+    // REGLA DE SEGURIDAD: Solo traemos la empresa si su estatus es 'Activa' o nulo (por defecto activa)
+    const querySQL = `
+        SELECT id_empresa, nombre_comercial, representante, telefono, correo_contacto, direccion 
+        FROM empresas_nodess 
+        WHERE id_empresa = ? AND (estatus = 'Activa' OR estatus IS NULL)
+    `;
+    
+    db.query(querySQL, [req.params.id], (err, results) => {
+        if (err) return res.status(500).json({ error: 'Error al cargar los datos de la empresa' });
+        if (results.length === 0) return res.status(404).json({ error: 'Empresa no encontrada o dada de baja.' });
+        
+        res.json(results[0]);
+    });
+});
+
+
 // Encender servidor
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor Backend corriendo en http://localhost:${PORT}`);
+    console.log(`Servidor Backend corriendo en http://localhost:${PORT}`);
 });
