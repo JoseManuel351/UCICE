@@ -1,162 +1,76 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
+  const token = localStorage.getItem('token');
+  const usuario = JSON.parse(localStorage.getItem('usuario'));
+  
   const [noticias, setNoticias] = useState([]);
+  const [cursos, setCursos] = useState([]);
   const [empresas, setEmpresas] = useState([]);
-  const [cursos, setCursos] = useState([]); // NUEVO: Estado para los cursos
 
   useEffect(() => {
-    // 1. Descargar y filtrar Noticias
-    fetch('http://localhost:3001/api/noticias')
-      .then(res => res.json())
-      .then(datos => {
-        const noticiasPublicadas = datos.filter(n => n.estatus === 'Publicado').slice(0, 3);
-        setNoticias(noticiasPublicadas);
-      })
-      .catch(error => console.error("Error al cargar noticias:", error));
+    if (!token) {
+      fetch('http://localhost:3001/api/noticias').then(res => res.json()).then(data => setNoticias(data.slice(0, 2)));
+      fetch('http://localhost:3001/api/cursos').then(res => res.json()).then(data => setCursos(data.slice(0, 1)));
+      fetch('http://localhost:3001/api/nodess').then(res => res.json()).then(data => setEmpresas(data.slice(0, 3)));
+    }
+  }, [token]);
 
-    // 2. Descargar y filtrar Empresas NODESS
-    fetch('http://localhost:3001/api/nodess')
-      .then(res => res.json())
-      .then(datos => {
-        const empresasActivas = datos.filter(e => e.estatus === 'Activa' || !e.estatus).slice(0, 6);
-        setEmpresas(empresasActivas);
-      })
-      .catch(error => console.error("Error al cargar NODESS:", error));
+  // --- VISTA LOGUEADA (PANEL DE BIENVENIDA) ---
+  if (token && usuario) {
+    return (
+      <div className="p-6 md:p-12 max-w-6xl mx-auto">
+        <header className="mb-10">
+          <h1 className="text-4xl font-black text-slate-800 tracking-tight">¡Hola, {usuario.nombre.split(' ')[0]}! 👋</h1>
+          <p className="text-lg text-slate-500 font-medium">Panel de servicios para {usuario.rol}.</p>
+        </header>
 
-    // 3. NUEVO: Descargar y filtrar Cursos
-    fetch('http://localhost:3001/api/cursos')
-      .then(res => res.json())
-      .then(datos => {
-        // REGLA DE NEGOCIO: Solo mostrar los 'Publicados' (máximo 3 en el Home)
-        const cursosPublicados = datos.filter(c => c.estatus === 'Publicado').slice(0, 3);
-        setCursos(cursosPublicados);
-      })
-      .catch(error => console.error("Error al cargar cursos:", error));
-  }, []);
-
-  return (
-    <div className="p-8 max-w-7xl mx-auto space-y-12">
-      
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-900 to-blue-700 rounded-2xl p-12 text-center text-white shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-        
-        <div className="relative z-10">
-          <h1 className="text-5xl font-black mb-4 tracking-tight">Bienvenidos a UCICE</h1>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto font-light">
-            Plataforma integral para el desarrollo de emprendimientos, capacitación y vinculación empresarial NODESS.
-          </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           
-          <Link 
-            to="/registro-mercadito" 
-            className="inline-block bg-green-500 hover:bg-green-400 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105"
-          >
-            Registro al Mercadito ➔
-          </Link>
+          {/* TARJETA: EVIDENCIAS */}
+          {(['Docente', 'Admin', 'Emprendedor'].includes(usuario.rol)) && (
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all group">
+              <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:bg-blue-600 group-hover:text-white transition-colors">📁</div>
+              <h3 className="font-bold text-xl text-slate-800 mb-2">Subir Evidencias</h3>
+              <p className="text-sm text-slate-500 mb-6 leading-relaxed">Reportes de vinculación, visitas industriales y proyectos NODESS.</p>
+              <Link to="/subir-evidencias" className="inline-block bg-slate-100 text-slate-700 font-bold px-6 py-2 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-all">Entrar →</Link>
+            </div>
+          )}
+
+          {/* TARJETA: CURSOS */}
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all group">
+            <div className="w-14 h-14 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:bg-green-600 group-hover:text-white transition-colors">🎓</div>
+            <h3 className="font-bold text-xl text-slate-800 mb-2">Mis Cursos</h3>
+            <p className="text-sm text-slate-500 mb-6 leading-relaxed">Explora capacitaciones, talleres y certificaciones disponibles.</p>
+            <Link to="/mis-cursos" className="inline-block bg-slate-100 text-slate-700 font-bold px-6 py-2 rounded-xl group-hover:bg-green-600 group-hover:text-white transition-all">Ver más →</Link>
+          </div>
+
+          {/* TARJETA: MERCADITO */}
+          {(['Estudiante', 'Emprendedor', 'Admin'].includes(usuario.rol)) && (
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all group">
+              <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:bg-purple-600 group-hover:text-white transition-colors">🛍️</div>
+              <h3 className="font-bold text-xl text-slate-800 mb-2">Mercadito UCICE</h3>
+              <p className="text-sm text-slate-500 mb-6 leading-relaxed">Gestiona tu emprendimiento o solicita un espacio de venta.</p>
+              <Link to="/registro-mercadito" className="inline-block bg-slate-100 text-slate-700 font-bold px-6 py-2 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-all">Ir ahora →</Link>
+            </div>
+          )}
         </div>
       </div>
+    );
+  }
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        
-        {/* SECCIÓN 1: Últimas Noticias */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
-          <h2 className="text-xl font-bold text-blue-900 mb-4 border-b pb-2 flex justify-between items-center">
-            <span>📰 Últimas Noticias</span>
-            <span className="text-xs text-blue-500 hover:underline cursor-pointer">Ver todas</span>
-          </h2>
-          
-          <div className="space-y-4 flex-1">
-            {noticias.length > 0 ? (
-              noticias.map(noticia => (
-                <Link 
-                  to={`/noticia/${noticia.id_noticia}`} 
-                  key={noticia.id_noticia} 
-                  className="flex gap-3 group cursor-pointer"
-                >
-                  <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                    {noticia.imagen_portada ? (
-                      <img src={`http://localhost:3001${noticia.imagen_portada}`} alt="Noticia" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">Sin foto</div>
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-gray-800 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                      {noticia.titulo}
-                    </h3>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {new Date(noticia.fecha_publicacion).toLocaleDateString()}
-                    </p>
-                  </div>
-                </Link>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500 text-center py-4">No hay noticias publicadas.</p>
-            )}
-          </div>
-        </div>
+  // --- VISTA PÚBLICA (MARKETING) ---
+  return (
+    <div className="flex flex-col gap-12 pb-20">
+      <section className="bg-blue-700 text-white py-24 px-6 text-center">
+        <h1 className="text-5xl md:text-6xl font-black mb-6 tracking-tighter">Bienvenidos a UCICE</h1>
+        <p className="text-xl text-blue-100 mb-10 max-w-2xl mx-auto font-medium">Plataforma integral para el desarrollo de emprendimientos y vinculación.</p>
+        <Link to="/registro" className="bg-green-500 hover:bg-green-400 text-white font-black px-10 py-4 rounded-full shadow-xl transition-all inline-block">Unirme Ahora →</Link>
+      </section>
 
-        {/* SECCIÓN 2: Cursos Disponibles (AHORA ES DINÁMICO) */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
-          <h2 className="text-xl font-bold text-blue-900 mb-4 border-b pb-2">🎓 Cursos Disponibles</h2>
-          <div className="space-y-3 flex-1">
-            {cursos.length > 0 ? (
-              cursos.map(curso => (
-                <div key={curso.id_curso} className="p-4 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition-colors">
-                  <h3 className="font-bold text-blue-800 text-sm line-clamp-1" title={curso.titulo}>{curso.titulo}</h3>
-                  <p className="text-xs text-blue-600 mt-1 mb-2 line-clamp-2">{curso.descripcion}</p>
-                  
-                  <div className="flex justify-between items-center mt-3 pt-2 border-t border-blue-200">
-                    <span className="text-[10px] font-bold text-blue-700 uppercase">
-                      Inicia: {curso.fecha_inicio ? new Date(curso.fecha_inicio).toLocaleDateString() : 'Por definir'}
-                    </span>
-                    
-                    {/* Botón de inscripción si el curso tiene enlace */}
-                    {curso.enlace_inscripcion && (
-                      <a 
-                        href={curso.enlace_inscripcion} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded shadow-sm font-bold transition-transform active:scale-95"
-                      >
-                        Inscribirme
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500 text-center py-4">No hay cursos disponibles por el momento.</p>
-            )}
-          </div>
-        </div>
-
-        {/* SECCIÓN 3: Empresas NODESS */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
-          <h2 className="text-xl font-bold text-blue-900 mb-4 border-b pb-2">🤝 Red NODESS</h2>
-          <p className="text-sm text-gray-500 mb-4">Empresas vinculadas a nuestra red de economía social.</p>
-          
-          <div className="grid grid-cols-2 gap-3">
-            {empresas.length > 0 ? (
-              empresas.map(empresa => (
-                <Link 
-                  to={`/empresa/${empresa.id_empresa}`} 
-                  key={empresa.id_empresa} 
-                  className="p-3 bg-slate-50 border border-slate-100 rounded-lg text-center hover:bg-slate-200 transition-colors cursor-pointer"
-                >
-                  <h3 className="font-bold text-xs text-gray-700 line-clamp-1" title={empresa.nombre_comercial}>
-                    {empresa.nombre_comercial}
-                  </h3>
-                </Link>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500 col-span-2 text-center py-4">No hay empresas en la red.</p>
-            )}
-          </div>
-        </div>
-
+      <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Aquí puedes reinsertar tus secciones de Noticias, Cursos y Red NODESS públicas si lo deseas */}
       </div>
     </div>
   );

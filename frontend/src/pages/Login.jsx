@@ -22,15 +22,14 @@ export default function Login() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
 
-      // GUARDAMOS EN SESSION (se borra al cerrar el navegador)
-      sessionStorage.setItem('token', data.token);
-      sessionStorage.setItem('usuario', JSON.stringify(data.usuario));
+      // GUARDADO PERMANENTE
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('usuario', JSON.stringify(data.usuario));
 
-      // REDIRECCIÓN SEGÚN EL ROL
       if (data.usuario.rol === 'Admin') {
         navigate('/admin');
       } else {
-        navigate('/'); // O a tu nueva página de 'Mi Portal'
+        navigate('/');
       }
 
     } catch (err) {

@@ -4,8 +4,8 @@ const cors = require('cors');
 const mysql = require('mysql2');
 const multer = require('multer');
 const path = require('path');
-const jwt = require('jsonwebtoken'); 
-const bcrypt = require('bcryptjs');  
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 
