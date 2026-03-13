@@ -3,40 +3,39 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 // Layouts y Seguridad
 import PublicLayout from './layouts/PublicLayout';
 import AdminLayout from './layouts/AdminLayout';
-import ProtectedRoute from './components/ProtectedRoute'; // Solo para Admin
-import UserProtectedRoute from './components/UserProtectedRoute'; // Para roles específicos
+import ProtectedRoute from './components/ProtectedRoute'; 
+import UserProtectedRoute from './components/UserProtectedRoute'; 
 
-// Páginas
+// Páginas Públicas/Usuarios
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Registro from './pages/Registro';
-import Dashboard from './pages/Dashboard';
-import Noticias from './pages/Noticias';
-import Nodess from './pages/Nodess';
-import Mercadito from './pages/Mercadito';
-import Cursos from './pages/Cursos';
+import Mercadito from './pages/Mercadito'; // Del Admin
+import Cursos from './pages/Cursos'; // Del Admin
 import RegistroMercadito from './pages/RegistroMercadito';
 import SubirEvidencia from './pages/SubirEvidencia';
 import MisCursos from './pages/MisCursos';
+
+// Páginas de Admin
+import Dashboard from './pages/Dashboard';
+import Noticias from './pages/Noticias';
+import Nodess from './pages/Nodess';
+import AdminEvidencias from './pages/AdminEvidencias'; // <-- NUEVA PÁGINA
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* --- CAPA PÚBLICA --- */}
+        {/* --- CAPA PÚBLICA / USUARIOS --- */}
         <Route path="/" element={<PublicLayout />}>
           <Route index element={<Home />} />
           <Route path="login" element={<Login />} />
           <Route path="registro" element={<Registro />} />
           
-          {/* RUTAS CON PROTECCIÓN POR ROL */}
-          
-          {/* Solo Docentes, Admin y Emprendedores (Encargados NODESS) */}
           <Route element={<UserProtectedRoute rolesPermitidos={['Docente', 'Admin', 'Emprendedor']} />}>
             <Route path="subir-evidencias" element={<SubirEvidencia />} />
           </Route>
 
-          {/* Acceso para cualquier usuario registrado */}
           <Route element={<UserProtectedRoute rolesPermitidos={['Estudiante', 'Docente', 'Admin', 'Emprendedor', 'Público General']} />}>
             <Route path="mis-cursos" element={<MisCursos />} />
             <Route path="registro-mercadito" element={<RegistroMercadito />} />
@@ -51,6 +50,7 @@ export default function App() {
             <Route path="nodess" element={<Nodess />} />
             <Route path="mercadito" element={<Mercadito />} />
             <Route path="cursos" element={<Cursos />} />
+            <Route path="evidencias" element={<AdminEvidencias />} /> {/* <-- NUEVA RUTA */}
           </Route>
         </Route>
       </Routes>
