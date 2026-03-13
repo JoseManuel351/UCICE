@@ -1,133 +1,220 @@
 import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function RegistroMercadito() {
+  const navigate = useNavigate();
+  const usuario = JSON.parse(localStorage.getItem('usuario'));
+
   const [carreras, setCarreras] = useState([]);
-  const [enviado, setEnviado] = useState(false);
-  const [formData, setFormData] = useState({
-    nombre_completo: '', id_carrera: '', correo_estudiante: '', numero_contacto: '',
-    nombre_emprendimiento: '', tipo_producto_servicio: '', descripcion_venta: '', redes_sociales: '',
-    cantidad_mesas: 1, requiere_electricidad: false, lleva_estructura: false, descripcion_estructura: '',
-    compromiso_lineamientos: false, acepto_condiciones: false
+  const [cargando, setCargando] = useState(false);
+  const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
+  const [imagen, setImagen] = useState(null);
+
+  const [formulario, setFormulario] = useState({
+    id_carrera: '',
+    nombre_completo: usuario?.nombre || '',
+    correo_estudiante: usuario?.correo || '',
+    numero_contacto: '',
+    nombre_emprendimiento: '',
+    tipo_producto_servicio: 'Producto',
+    descripcion_venta: '',
+    redes_sociales: '',
+    cantidad_mesas: 1,
+    requiere_electricidad: 'No',
+    lleva_estructura: 'No',
+    descripcion_estructura: ''
   });
 
   useEffect(() => {
     fetch('http://localhost:3001/api/carreras')
       .then(res => res.json())
-      .then(data => {
-        setCarreras(data);
-        if (data.length > 0) {
-            setFormData(prev => ({ ...prev, id_carrera: data[0].id_carrera }));
-        }
-      })
-      .catch(err => console.error("Error cargando carreras:", err));
+      .then(data => setCarreras(data))
+      .catch(err => console.error("Error al cargar carreras:", err));
   }, []);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!formData.acepto_condiciones || !formData.compromiso_lineamientos) {
-        alert("Debes aceptar los lineamientos y condiciones para enviar tu solicitud.");
-        return;
-    }
-
-    fetch('http://localhost:3001/api/mercadito/registro', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
-    })
-    .then(res => res.json())
-    .then(() => setEnviado(true))
-    .catch(err => console.error(err));
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormulario({ ...formulario, [name]: value });
   };
 
-  if (enviado) {
-    return (
-      <div className="max-w-md mx-auto my-20 p-10 bg-green-50 border border-green-200 rounded-2xl text-center shadow-sm">
-        <h2 className="text-3xl font-bold text-green-800 mb-2">¡Registro Exitoso!</h2>
-        <p className="text-green-700">Tu solicitud ha sido recibida y será evaluada.</p>
-      </div>
-    );
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setCargando(true);
+    setMensaje({ texto: '', tipo: '' });
+
+    if (!formulario.id_carrera) {
+      setMensaje({ texto: 'Por favor, selecciona tu carrera.', tipo: 'error' });
+      setCargando(false);
+      return;
+    }
+
+    const formData = new FormData();
+    
+    // --- CONVERSIÓN DE BOOLEANOS PARA MYSQL ---
+    // MySQL espera un número entero (1 o 0), no la palabra "Si" o "No"
+    const datosConvertidos = {
+      ...formulario,
+      requiere_electricidad: formulario.requiere_electricidad === 'Si' ? 1 : 0,
+      lleva_estructura: formulario.lleva_estructura === 'Si' ? 1 : 0
+    };
+
+    // Empaquetamos los datos ya convertidos
+    Object.keys(datosConvertidos).forEach(key => {
+      formData.append(key, datosConvertidos[key]);
+    });
+    
+    if (imagen) {
+      formData.append('imagen', imagen);
+    }
+
+    try {
+      const res = await fetch('http://localhost:3001/api/mercadito/registro', {
+        method: 'POST',
+        body: formData 
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al enviar la solicitud');
+
+      setMensaje({ texto: '✅ ¡Solicitud enviada con éxito! El administrador la revisará pronto.', tipo: 'exito' });
+      
+      setTimeout(() => navigate('/'), 3000);
+
+    } catch (error) {
+      setMensaje({ texto: `❌ ${error.message}`, tipo: 'error' });
+    } finally {
+      setCargando(false);
+    }
+  };
 
   return (
-    <div className="max-w-3xl mx-auto p-8 bg-white my-10 rounded-2xl shadow-xl border border-gray-100">
-      <h2 className="text-3xl font-black text-blue-900 mb-8 border-b pb-4">Cédula de Registro - Mercadito UCICE</h2>
+    <div className="p-6 md:p-12 max-w-4xl mx-auto">
       
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="mb-8 flex items-center gap-4">
+        <Link to="/" className="w-10 h-10 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center font-bold hover:bg-slate-300 transition-colors">←</Link>
+        <div>
+          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Registro al Mercadito UCICE</h1>
+          <p className="text-slate-500 font-medium mt-1">Solicita tu espacio y muestra tus productos con fotos reales.</p>
+        </div>
+      </div>
+
+      <div className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-slate-200">
         
-        {/* DATOS PERSONALES */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <label className="block text-sm font-bold text-gray-700">Nombre del Representante *</label>
-            <input type="text" className="w-full p-3 bg-gray-50 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required onChange={e => setFormData({...formData, nombre_completo: e.target.value})} />
+        {mensaje.texto && (
+          <div className={`p-4 rounded-xl mb-8 font-bold text-sm text-center animate-[fadeIn_0.3s_ease-out] ${mensaje.tipo === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+            {mensaje.texto}
           </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-10">
           
-          <div className="md:col-span-2">
-            <label className="block text-sm font-bold text-gray-700">Carrera que Cursa *</label>
-            <select className="w-full p-3 bg-gray-50 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required onChange={e => setFormData({...formData, id_carrera: e.target.value})}>
-              {carreras.map(carrera => (
-                <option key={carrera.id_carrera} value={carrera.id_carrera}>{carrera.nombre_carrera}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700">Correo Institucional *</label>
-            <input type="email" className="w-full p-3 bg-gray-50 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required onChange={e => setFormData({...formData, correo_estudiante: e.target.value})} />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700">Número de Contacto *</label>
-            <input type="text" className="w-full p-3 bg-gray-50 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required onChange={e => setFormData({...formData, numero_contacto: e.target.value})} />
-          </div>
-        </div>
-
-        {/* EL NEGOCIO */}
-        <div className="space-y-4">
-          <h3 className="font-bold text-blue-700 border-l-4 border-blue-700 pl-2">Información del Emprendimiento</h3>
-          <input type="text" placeholder="Nombre del Emprendimiento *" className="w-full p-3 bg-gray-50 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required onChange={e => setFormData({...formData, nombre_emprendimiento: e.target.value})} />
-          <input type="text" placeholder="Redes Sociales (FB, IG, TikTok)" className="w-full p-3 bg-gray-50 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" onChange={e => setFormData({...formData, redes_sociales: e.target.value})} />
-          <input type="text" placeholder="¿Qué vendes? (Ej: Ropa, Postres) *" className="w-full p-3 bg-gray-50 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required onChange={e => setFormData({...formData, tipo_producto_servicio: e.target.value})} />
-          <textarea placeholder="Describe tus productos y precios *" className="w-full p-3 bg-gray-50 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required onChange={e => setFormData({...formData, descripcion_venta: e.target.value})}></textarea>
-        </div>
-
-        {/* LOGÍSTICA */}
-        <div className="bg-slate-50 p-6 rounded-xl space-y-4 border border-slate-200">
-          <h3 className="font-bold text-gray-800">Requerimientos para el Stand</h3>
-          <div className="flex flex-col md:flex-row md:items-center gap-6">
-            <div>
-              <label className="block text-sm font-medium mb-1">Mesas necesarias</label>
-              <input type="number" min="1" max="2" defaultValue="1" className="p-2 border rounded outline-none" onChange={e => setFormData({...formData, cantidad_mesas: e.target.value})} />
+          <section>
+            <h2 className="text-xl font-black text-blue-900 border-b border-slate-100 pb-2 mb-6">1. Datos del Estudiante</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Nombre Completo</label>
+                <input type="text" name="nombre_completo" required value={formulario.nombre_completo} onChange={handleChange} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Correo Institucional / Personal</label>
+                <input type="email" name="correo_estudiante" required value={formulario.correo_estudiante} onChange={handleChange} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Número Celular (WhatsApp)</label>
+                <input type="tel" name="numero_contacto" required maxLength="10" placeholder="Ej. 3121234567" value={formulario.numero_contacto} onChange={handleChange} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Carrera</label>
+                <select name="id_carrera" required value={formulario.id_carrera} onChange={handleChange} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-700">
+                  <option value="">-- Selecciona tu carrera --</option>
+                  {carreras.map(c => (
+                    <option key={c.id_carrera} value={c.id_carrera}>{c.nombre_carrera}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <label className="flex items-center gap-2 cursor-pointer mt-2 md:mt-0">
-              <input type="checkbox" className="w-4 h-4" onChange={e => setFormData({...formData, requiere_electricidad: e.target.checked})} />
-              <span className="text-sm font-medium text-gray-700">¿Requiere electricidad?</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer mt-2 md:mt-0">
-              <input type="checkbox" className="w-4 h-4" onChange={e => setFormData({...formData, lleva_estructura: e.target.checked})} />
-              <span className="text-sm font-medium text-gray-700">¿Llevarás estructura propia?</span>
-            </label>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-blue-900 border-b border-slate-100 pb-2 mb-6">2. Sobre el Emprendimiento</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Nombre de tu Marca/Negocio</label>
+                <input type="text" name="nombre_emprendimiento" required value={formulario.nombre_emprendimiento} onChange={handleChange} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">¿Qué ofreces?</label>
+                <select name="tipo_producto_servicio" value={formulario.tipo_producto_servicio} onChange={handleChange} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-700">
+                  <option value="Producto">Producto Físico (Comida, Ropa, Artesanías, etc.)</option>
+                  <option value="Servicio">Servicio (Asesorías, Mantenimiento, etc.)</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-bold text-slate-700 mb-2">Descripción de lo que vas a vender</label>
+                <textarea name="descripcion_venta" required rows="3" placeholder="Ej. Venta de postres caseros..." value={formulario.descripcion_venta} onChange={handleChange} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"></textarea>
+              </div>
+              
+              <div className="md:col-span-2">
+                <label className="block text-sm font-bold text-slate-700 mb-2">Sube una foto de tus productos 📷</label>
+                <input 
+                  type="file" 
+                  accept=".jpg,.jpeg,.png"
+                  onChange={e => setImagen(e.target.files[0])} 
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer" 
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-bold text-slate-700 mb-2">Redes Sociales (Opcional)</label>
+                <input type="text" name="redes_sociales" placeholder="Instagram: @minegocio" value={formulario.redes_sociales} onChange={handleChange} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-black text-blue-900 border-b border-slate-100 pb-2 mb-6">3. Logística (Tu Espacio)</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Mesas requeridas (Máx. 2)</label>
+                <input type="number" name="cantidad_mesas" min="1" max="2" required value={formulario.cantidad_mesas} onChange={handleChange} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">¿Necesitas electricidad?</label>
+                <select name="requiere_electricidad" value={formulario.requiere_electricidad} onChange={handleChange} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-700">
+                  <option value="No">No</option>
+                  <option value="Si">Sí (Lleva tu extensión)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">¿Llevas estructura?</label>
+                <select name="lleva_estructura" value={formulario.lleva_estructura} onChange={handleChange} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-700">
+                  <option value="No">No</option>
+                  <option value="Si">Sí (Toldo, banner, percheros)</option>
+                </select>
+              </div>
+              
+              {formulario.lleva_estructura === 'Si' && (
+                <div className="md:col-span-3 animate-[fadeIn_0.3s_ease-in-out]">
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Describe tu estructura</label>
+                  <input type="text" name="descripcion_estructura" placeholder="Ej. Toldo de 3x3 metros" value={formulario.descripcion_estructura} onChange={handleChange} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" required />
+                </div>
+              )}
+            </div>
+          </section>
+
+          <div className="pt-8 border-t border-slate-100 flex justify-end">
+            <button 
+              type="submit" 
+              disabled={cargando} 
+              className="bg-purple-600 hover:bg-purple-700 text-white font-black py-4 px-10 rounded-xl shadow-md transition-all active:scale-95 disabled:bg-slate-400 flex items-center gap-2"
+            >
+              {cargando ? 'ENVIANDO SOLICITUD...' : '📋 ENVIAR SOLICITUD'}
+            </button>
           </div>
-          
-          {formData.lleva_estructura && (
-            <textarea placeholder="Describe tu estructura *" className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required onChange={e => setFormData({...formData, descripcion_estructura: e.target.value})}></textarea>
-          )}
-        </div>
-
-        {/* COMPROMISO */}
-        <div className="space-y-3 bg-orange-50 p-4 rounded-lg border border-orange-100">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input type="checkbox" className="mt-1 w-4 h-4" required onChange={e => setFormData({...formData, compromiso_lineamientos: e.target.checked})} />
-            <span className="text-sm text-gray-700 leading-tight">Me comprometo a seguir los horarios y lineamientos.</span>
-          </label>
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input type="checkbox" className="mt-1 w-4 h-4" required onChange={e => setFormData({...formData, acepto_condiciones: e.target.checked})} />
-            <span className="text-sm text-gray-800 font-bold leading-tight">He leído y acepto los términos y condiciones.</span>
-          </label>
-        </div>
-
-        <button type="submit" className="w-full bg-blue-900 text-white font-black py-4 rounded-xl shadow-lg hover:bg-blue-800 transition-all">
-          ENVIAR REGISTRO
-        </button>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

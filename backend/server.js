@@ -97,81 +97,23 @@ app.get('/api/carreras', (req, res) => {
 // CURSOS
 // ==========================================
 app.get('/api/cursos', (req, res) => {
-    db.query('SELECT * FROM cursos_capacitacion ORDER BY fecha_creacion DESC', (err, results) => {
-        if (err) return res.status(500).json({ error: 'Error al cargar los cursos' });
-        res.json(results);
-    });
+    db.query('SELECT * FROM cursos_capacitacion ORDER BY fecha_creacion DESC', (err, results) => res.json(results));
 });
 
 app.post('/api/cursos', (req, res) => {
     const { titulo, descripcion, fecha_inicio, enlace_inscripcion, estatus } = req.body;
     db.query(`INSERT INTO cursos_capacitacion (titulo, descripcion, fecha_inicio, enlace_inscripcion, estatus) VALUES (?, ?, ?, ?, ?)`, 
-    [titulo, descripcion, fecha_inicio || null, enlace_inscripcion, estatus || 'Borrador'], (err) => {
-        if (err) return res.status(500).json({ error: 'Error al guardar' });
-        res.json({ mensaje: '¡Curso registrado con éxito!' });
-    });
+    [titulo, descripcion, fecha_inicio || null, enlace_inscripcion, estatus || 'Borrador'], (err) => res.json({ mensaje: 'Curso registrado' }));
 });
 
 app.put('/api/cursos/:id', (req, res) => {
     const { titulo, descripcion, fecha_inicio, enlace_inscripcion, estatus } = req.body;
     db.query(`UPDATE cursos_capacitacion SET titulo = ?, descripcion = ?, fecha_inicio = ?, enlace_inscripcion = ?, estatus = ? WHERE id_curso = ?`, 
-    [titulo, descripcion, fecha_inicio || null, enlace_inscripcion, estatus, req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: 'Error al actualizar' });
-        res.json({ mensaje: 'Curso actualizado.' });
-    });
+    [titulo, descripcion, fecha_inicio || null, enlace_inscripcion, estatus, req.params.id], (err) => res.json({ mensaje: 'Curso actualizado.' }));
 });
 
 app.delete('/api/cursos/:id', (req, res) => {
-    db.query('DELETE FROM cursos_capacitacion WHERE id_curso = ?', [req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: 'Error al eliminar' });
-        res.json({ mensaje: 'Curso eliminado.' });
-    });
-});
-
-// ==========================================
-// MERCADITO
-// ==========================================
-app.get('/api/mercadito', (req, res) => {
-    const querySQL = `
-        SELECT sm.*, emp.nombre_emprendimiento, emp.tipo_producto_servicio, emp.descripcion_venta, emp.redes_sociales,
-        est.nombre_completo AS estudiante, est.correo_estudiante, est.numero_contacto, c.nombre_carrera
-        FROM solicitudes_mercadito sm
-        JOIN emprendimientos emp ON sm.id_emprendimiento = emp.id_emprendimiento
-        JOIN estudiantes est ON emp.id_estudiante = est.id_estudiante
-        JOIN catalogo_carreras c ON est.id_carrera = c.id_carrera
-        ORDER BY sm.fecha_solicitud DESC;
-    `;
-    db.query(querySQL, (err, results) => {
-        if (err) return res.status(500).json({ error: 'Error interno' });
-        res.json(results);
-    });
-});
-
-app.post('/api/mercadito/registro', (req, res) => {
-    const { id_carrera, nombre_completo, correo_estudiante, numero_contacto, nombre_emprendimiento, tipo_producto_servicio, descripcion_venta, redes_sociales, cantidad_mesas, requiere_electricidad, lleva_estructura, descripcion_estructura } = req.body;
-    db.query(`INSERT INTO estudiantes (id_carrera, nombre_completo, correo_estudiante, numero_contacto) VALUES (?, ?, ?, ?)`, 
-    [id_carrera, nombre_completo, correo_estudiante, numero_contacto], (err, resEst) => {
-        if (err) return res.status(500).json({ error: 'Error al registrar estudiante' });
-        const idEstudiante = resEst.insertId;
-        db.query(`INSERT INTO emprendimientos (id_estudiante, nombre_emprendimiento, tipo_producto_servicio, descripcion_venta, redes_sociales) VALUES (?, ?, ?, ?, ?)`, 
-        [idEstudiante, nombre_emprendimiento, tipo_producto_servicio, descripcion_venta, redes_sociales], (err, resEmp) => {
-            if (err) return res.status(500).json({ error: 'Error al registrar emprendimiento' });
-            const idEmprendimiento = resEmp.insertId;
-            db.query(`INSERT INTO solicitudes_mercadito (id_emprendimiento, cantidad_mesas, requiere_electricidad, lleva_estructura, descripcion_estructura, estatus_solicitud) VALUES (?, ?, ?, ?, ?, 'Pendiente')`, 
-            [idEmprendimiento, cantidad_mesas, requiere_electricidad, lleva_estructura, descripcion_estructura], (err) => {
-                if (err) return res.status(500).json({ error: 'Error al registrar logística' });
-                res.json({ mensaje: 'Solicitud enviada' });
-            });
-        });
-    });
-});
-
-app.put('/api/mercadito/aprobar/:id', (req, res) => {
-    db.query("UPDATE solicitudes_mercadito SET estatus_solicitud = 'Aprobada' WHERE id_solicitud = ?", [req.params.id], (err) => res.json({ mensaje: 'Aprobada' }));
-});
-
-app.put('/api/mercadito/rechazar/:id', (req, res) => {
-    db.query("UPDATE solicitudes_mercadito SET estatus_solicitud = 'Rechazada' WHERE id_solicitud = ?", [req.params.id], (err) => res.json({ mensaje: 'Rechazada' }));
+    db.query('DELETE FROM cursos_capacitacion WHERE id_curso = ?', [req.params.id], (err) => res.json({ mensaje: 'Curso eliminado.' }));
 });
 
 // ==========================================
@@ -212,9 +154,8 @@ app.post('/api/noticias', uploadNoticias.array('imagenes', 10), (req, res) => {
     db.query(`INSERT INTO noticias_micrositio (id_usuario_autor, titulo, contenido, imagen_portada, estatus) VALUES (?, ?, ?, ?, ?)`, 
     [id_usuario_autor, titulo, contenido, rutaPortada, estatus || 'Borrador'], (err, results) => {
         if (err) return res.status(500).json({ error: 'Error' });
-        const idNoticiaNueva = results.insertId;
         if (req.files && req.files.length > 1) { 
-            const valoresGaleria = req.files.slice(1).map(file => [idNoticiaNueva, `/uploads/noticias/${file.filename}`]);
+            const valoresGaleria = req.files.slice(1).map(file => [results.insertId, `/uploads/noticias/${file.filename}`]);
             db.query(`INSERT INTO galeria_noticias (id_noticia, ruta_archivo) VALUES ?`, [valoresGaleria]);
         }
         res.json({ mensaje: 'Publicada' });
@@ -226,7 +167,7 @@ app.delete('/api/noticias/:id', (req, res) => {
 });
 
 // ==========================================
-// EVIDENCIAS (CON RUTA DE APROBACIÓN)
+// EVIDENCIAS
 // ==========================================
 const storageEvidencias = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/evidencias/'),
@@ -235,36 +176,100 @@ const storageEvidencias = multer.diskStorage({
 const uploadEvidencia = multer({ storage: storageEvidencias });
 
 app.get('/api/evidencias', (req, res) => {
-    const querySQL = `
-        SELECT e.*, u.nombre_completo AS autor, u.rol 
-        FROM evidencias e 
-        JOIN usuarios u ON e.id_usuario = u.id_usuario 
-        ORDER BY e.fecha_registro DESC
-    `;
-    db.query(querySQL, (err, results) => {
-        if (err) return res.status(500).json({ error: 'Error al cargar las evidencias' });
-        res.json(results);
-    });
+    db.query(`SELECT e.*, u.nombre_completo AS autor, u.rol FROM evidencias e JOIN usuarios u ON e.id_usuario = u.id_usuario ORDER BY e.fecha_registro DESC`, 
+    (err, results) => res.json(results));
 });
 
 app.post('/api/evidencias', uploadEvidencia.single('archivo'), (req, res) => {
     const { id_usuario, titulo, descripcion, fecha_actividad } = req.body;
     if (!req.file) return res.status(400).json({ error: 'Falta archivo.' });
 
-    db.query(
-        `INSERT INTO evidencias (id_usuario, titulo, descripcion, fecha_actividad, ruta_archivo) VALUES (?, ?, ?, ?, ?)`,
-        [id_usuario, titulo, descripcion, fecha_actividad, `/uploads/evidencias/${req.file.filename}`],
-        (err) => res.json({ mensaje: 'Subida con éxito' })
-    );
+    db.query(`INSERT INTO evidencias (id_usuario, titulo, descripcion, fecha_actividad, ruta_archivo) VALUES (?, ?, ?, ?, ?)`,
+    [id_usuario, titulo, descripcion, fecha_actividad, `/uploads/evidencias/${req.file.filename}`], (err) => res.json({ mensaje: 'Subida con éxito' }));
 });
 
-// NUEVA RUTA: Para que el admin apruebe o rechace
 app.put('/api/evidencias/estatus/:id', (req, res) => {
-    const { estatus } = req.body;
-    db.query('UPDATE evidencias SET estatus = ? WHERE id_evidencia = ?', [estatus, req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: 'Error al actualizar el estatus' });
-        res.json({ mensaje: `Evidencia marcada como ${estatus}.` });
+    db.query('UPDATE evidencias SET estatus = ? WHERE id_evidencia = ?', [req.body.estatus, req.params.id], (err) => res.json({ mensaje: `Actualizado` }));
+});
+
+// ==========================================
+// MERCADITO (INTELIGENTE: BUSCA O CREA ESTUDIANTE)
+// ==========================================
+const storageMercadito = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, 'uploads/mercadito/'),
+    filename: (req, file, cb) => cb(null, Date.now() + '-mercadito-' + file.originalname)
+});
+const uploadMercadito = multer({ storage: storageMercadito });
+
+app.get('/api/mercadito', (req, res) => {
+    const querySQL = `
+        SELECT sm.*, emp.nombre_emprendimiento, emp.tipo_producto_servicio, emp.descripcion_venta, emp.redes_sociales, emp.imagen_producto,
+        est.nombre_completo AS estudiante, est.correo_estudiante, est.numero_contacto, c.nombre_carrera
+        FROM solicitudes_mercadito sm
+        JOIN emprendimientos emp ON sm.id_emprendimiento = emp.id_emprendimiento
+        JOIN estudiantes est ON emp.id_estudiante = est.id_estudiante
+        JOIN catalogo_carreras c ON est.id_carrera = c.id_carrera
+        ORDER BY sm.fecha_solicitud DESC;
+    `;
+    db.query(querySQL, (err, results) => {
+        if (err) return res.status(500).json({ error: 'Error interno' });
+        res.json(results);
     });
+});
+
+app.post('/api/mercadito/registro', uploadMercadito.single('imagen'), (req, res) => {
+    const { id_carrera, nombre_completo, correo_estudiante, numero_contacto, nombre_emprendimiento, tipo_producto_servicio, descripcion_venta, redes_sociales, cantidad_mesas, requiere_electricidad, lleva_estructura, descripcion_estructura } = req.body;
+    
+    const rutaImagen = req.file ? `/uploads/mercadito/${req.file.filename}` : null;
+
+    // Función auxiliar para continuar el registro una vez que tenemos el ID del estudiante
+    const continuarRegistro = (idEstudiante) => {
+        db.query(`INSERT INTO emprendimientos (id_estudiante, nombre_emprendimiento, tipo_producto_servicio, descripcion_venta, redes_sociales, imagen_producto) VALUES (?, ?, ?, ?, ?, ?)`, 
+        [idEstudiante, nombre_emprendimiento, tipo_producto_servicio, descripcion_venta, redes_sociales, rutaImagen], (err, resEmp) => {
+            if (err) {
+                console.error('❌ Error SQL en emprendimientos:', err.message);
+                return res.status(500).json({ error: 'Error al registrar emprendimiento' });
+            }
+            const idEmprendimiento = resEmp.insertId;
+            
+            db.query(`INSERT INTO solicitudes_mercadito (id_emprendimiento, cantidad_mesas, requiere_electricidad, lleva_estructura, descripcion_estructura, estatus_solicitud) VALUES (?, ?, ?, ?, ?, 'Pendiente')`, 
+            [idEmprendimiento, cantidad_mesas, requiere_electricidad, lleva_estructura, descripcion_estructura], (err) => {
+                if (err) {
+                    console.error('❌ Error SQL en solicitudes:', err.message);
+                    return res.status(500).json({ error: 'Error al registrar logística' });
+                }
+                res.json({ mensaje: 'Solicitud enviada' });
+            });
+        });
+    };
+
+    // PASO 1: Buscar si el estudiante ya existe por su correo
+    db.query('SELECT id_estudiante FROM estudiantes WHERE correo_estudiante = ?', [correo_estudiante], (err, results) => {
+        if (err) return res.status(500).json({ error: 'Error al consultar estudiante' });
+
+        if (results.length > 0) {
+            // El estudiante YA EXISTE, usamos su ID
+            continuarRegistro(results[0].id_estudiante);
+        } else {
+            // El estudiante NO EXISTE, lo creamos nuevo
+            db.query(`INSERT INTO estudiantes (id_carrera, nombre_completo, correo_estudiante, numero_contacto) VALUES (?, ?, ?, ?)`, 
+            [id_carrera, nombre_completo, correo_estudiante, numero_contacto], (err, resEst) => {
+                if (err) {
+                    console.error('❌ Error SQL en estudiantes:', err.message);
+                    return res.status(500).json({ error: 'Error al registrar estudiante' });
+                }
+                continuarRegistro(resEst.insertId);
+            });
+        }
+    });
+});
+
+app.put('/api/mercadito/aprobar/:id', (req, res) => {
+    db.query("UPDATE solicitudes_mercadito SET estatus_solicitud = 'Aprobada' WHERE id_solicitud = ?", [req.params.id], (err) => res.json({ mensaje: 'Aprobada' }));
+});
+
+app.put('/api/mercadito/rechazar/:id', (req, res) => {
+    db.query("UPDATE solicitudes_mercadito SET estatus_solicitud = 'Rechazada' WHERE id_solicitud = ?", [req.params.id], (err) => res.json({ mensaje: 'Rechazada' }));
 });
 
 const PORT = process.env.PORT || 3001;
