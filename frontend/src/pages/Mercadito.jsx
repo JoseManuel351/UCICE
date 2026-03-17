@@ -224,6 +224,7 @@ export default function Mercadito() {
                   ${solicitudSeleccionada.estatus_solicitud === 'Pendiente' ? 'bg-yellow-100 text-yellow-700' : ''}
                   ${solicitudSeleccionada.estatus_solicitud === 'Aprobada' ? 'bg-green-100 text-green-700' : ''}
                   ${solicitudSeleccionada.estatus_solicitud === 'Rechazada' ? 'bg-red-100 text-red-700' : ''}
+                  ${solicitudSeleccionada.estatus_solicitud === 'Cancelada' ? 'bg-gray-100 text-gray-600' : ''}
                 `}>
                   {solicitudSeleccionada.estatus_solicitud}
                 </span>

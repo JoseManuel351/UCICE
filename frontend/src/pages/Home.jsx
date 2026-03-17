@@ -1,199 +1,248 @@
-import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-
-// ==========================================
-// COMPONENTE: Carrusel de Imágenes
-// ==========================================
-const CarruselNoticia = ({ portada, galeria }) => {
-  // Unimos la portada y la galería. Parseamos la galería si el backend la manda como texto.
-  let imagenesExtra = [];
-  try {
-    imagenesExtra = typeof galeria === 'string' ? JSON.parse(galeria) : (galeria || []);
-  } catch (e) {
-    imagenesExtra = [];
-  }
-  
-  const imagenes = [portada, ...imagenesExtra].filter(Boolean);
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    if (imagenes.length <= 1) return;
-    const interval = setInterval(() => {
-      setIndex((prev) => (prev + 1) % imagenes.length);
-    }, 4000); // Cambia cada 4 segundos
-    return () => clearInterval(interval);
-  }, [imagenes.length]);
-
-  if (imagenes.length === 0) {
-    return <div className="h-56 bg-slate-200 flex items-center justify-center text-slate-400 text-sm font-medium">Sin imagen</div>;
-  }
-
-  return (
-    <div className="h-56 w-full relative overflow-hidden bg-slate-900 group">
-      <img
-        key={index}
-        src={`http://localhost:3001${imagenes[index]}`}
-        className="w-full h-full object-cover transition-opacity duration-500"
-        alt="Imagen de noticia"
-      />
-      {imagenes.length > 1 && (
-        <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
-          {imagenes.map((_, i) => (
-            <div key={i} className={`w-2 h-2 rounded-full transition-all ${i === index ? 'bg-white scale-125' : 'bg-white/50'}`} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
+import { Link } from 'react-router-dom';
 
 export default function Home() {
-  const token = localStorage.getItem('token');
-  const usuario = JSON.parse(localStorage.getItem('usuario'));
-  
   const [noticias, setNoticias] = useState([]);
   const [cursos, setCursos] = useState([]);
-  const [empresas, setEmpresas] = useState([]);
+  const [nodess, setNodess] = useState([]);
+  
+  const [cargando, setCargando] = useState(true);
+  const [noticiaSeleccionada, setNoticiaSeleccionada] = useState(null);
 
   useEffect(() => {
-    if (!token) {
-      fetch('http://localhost:3001/api/noticias').then(res => res.json()).then(data => setNoticias(data.slice(0, 3)));
-      fetch('http://localhost:3001/api/cursos').then(res => res.json()).then(data => setCursos(data.slice(0, 4)));
-      fetch('http://localhost:3001/api/nodess').then(res => res.json()).then(data => setEmpresas(data.slice(0, 4)));
+    if (noticiaSeleccionada) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
     }
-  }, [token]);
+    return () => { document.body.style.overflow = 'auto'; };
+  }, [noticiaSeleccionada]);
 
-  // ==========================================
-  // VISTA 1: USUARIO LOGUEADO
-  // ==========================================
-  if (token && usuario) {
-    return (
-      <div className="p-6 md:p-12 max-w-6xl mx-auto">
-        <header className="mb-10">
-          <h1 className="text-4xl font-black text-slate-800 tracking-tight">¡Hola, {usuario.nombre.split(' ')[0]}! 👋</h1>
-          <p className="text-lg text-slate-500 font-medium">Panel de servicios para {usuario.rol}.</p>
-        </header>
+  useEffect(() => {
+    const cargarTodo = async () => {
+      try {
+        const [resNoticias, resCursos, resNodess] = await Promise.all([
+          fetch('http://localhost:3001/api/noticias'),
+          fetch('http://localhost:3001/api/cursos'),
+          fetch('http://localhost:3001/api/nodess')
+        ]);
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {(['Docente', 'Admin', 'Emprendedor'].includes(usuario.rol)) && (
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all group">
-              <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-3xl mb-6">📁</div>
-              <h3 className="font-bold text-xl text-slate-800 mb-2">Subir Evidencias</h3>
-              <p className="text-sm text-slate-500 mb-6 leading-relaxed">Reportes de vinculación, visitas industriales y proyectos NODESS.</p>
-              <Link to="/subir-evidencias" className="inline-block bg-slate-100 text-slate-700 font-bold px-6 py-2 rounded-xl hover:bg-blue-600 hover:text-white transition-all">Entrar →</Link>
-            </div>
-          )}
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all group">
-            <div className="w-14 h-14 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center text-3xl mb-6">🎓</div>
-            <h3 className="font-bold text-xl text-slate-800 mb-2">Mis Cursos</h3>
-            <p className="text-sm text-slate-500 mb-6 leading-relaxed">Explora capacitaciones, talleres y certificaciones disponibles.</p>
-            <Link to="/mis-cursos" className="inline-block bg-slate-100 text-slate-700 font-bold px-6 py-2 rounded-xl hover:bg-green-600 hover:text-white transition-all">Ver más →</Link>
-          </div>
-          {(['Estudiante', 'Emprendedor', 'Admin'].includes(usuario.rol)) && (
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all group">
-              <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center text-3xl mb-6">🛍️</div>
-              <h3 className="font-bold text-xl text-slate-800 mb-2">Mercadito UCICE</h3>
-              <p className="text-sm text-slate-500 mb-6 leading-relaxed">Gestiona tu emprendimiento o solicita un espacio de venta.</p>
-              <Link to="/registro-mercadito" className="inline-block bg-slate-100 text-slate-700 font-bold px-6 py-2 rounded-xl hover:bg-purple-600 hover:text-white transition-all">Ir ahora →</Link>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+        const dataNoticias = await resNoticias.json();
+        const dataCursos = await resCursos.json();
+        const dataNodess = await resNodess.json();
+        
+        setNoticias(dataNoticias.filter(n => n.estatus === 'Publicado'));
+        setCursos(dataCursos.filter(c => c.estatus !== 'Borrador'));
+        setNodess(dataNodess); 
 
-  // ==========================================
-  // VISTA 2: MARKETING PÚBLICO
-  // ==========================================
+      } catch (error) {
+        console.error("Error al cargar los datos del portal:", error);
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    cargarTodo();
+  }, []);
+
+  const parsearGaleria = (galeriaJSON) => {
+    if (!galeriaJSON) return [];
+    try {
+      return typeof galeriaJSON === 'string' ? JSON.parse(galeriaJSON) : galeriaJSON;
+    } catch (e) {
+      return [];
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-10 pb-20 bg-slate-50 min-h-screen">
+    <div className="w-full relative bg-slate-50 min-h-screen pb-20">
       
-      {/* HERO REDUCIDO */}
-      <section className="bg-blue-900 text-white py-14 px-6 text-center shadow-md">
-        <h1 className="text-3xl md:text-5xl font-black mb-4 tracking-tight">Bienvenidos a UCICE</h1>
-        <p className="text-base md:text-lg text-blue-200 mb-8 max-w-2xl mx-auto font-medium">Plataforma integral para el desarrollo de emprendimientos, capacitación y vinculación empresarial NODESS.</p>
-        <Link to="/registro" className="bg-green-500 hover:bg-green-400 text-white font-black px-8 py-3 rounded-full shadow-lg transition-transform active:scale-95 inline-block text-sm uppercase tracking-wide">
-          Unirme Ahora
-        </Link>
+      {/* SECCIÓN HERO (PORTADA) */}
+      <section className="bg-[#1e3a8a] text-white py-16 px-6 text-center">
+        <div className="max-w-4xl mx-auto flex flex-col items-center">
+          <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight">Bienvenidos a UCICE</h1>
+          <p className="text-base md:text-lg text-blue-100 mb-8 font-medium max-w-2xl">
+            Plataforma integral para el desarrollo de emprendimientos, capacitación y vinculación empresarial NODESS.
+          </p>
+          <div className="flex gap-4">
+            <Link to="/registro" className="bg-[#22c55e] hover:bg-[#16a34a] text-white font-black px-8 py-3 rounded-full shadow-md transition-all active:scale-95 text-sm">
+              UNIRME AHORA
+            </Link>
+          </div>
+        </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full flex flex-col gap-10">
-        
-        {/* NOTICIAS (Ancho Completo con Carrusel) */}
-        <section>
-          <div className="flex justify-between items-end mb-6">
-            <h2 className="font-black text-2xl text-blue-900">📰 Últimas Noticias</h2>
-            <Link to="/noticias" className="text-sm font-bold text-blue-600 hover:underline">Ver todas →</Link>
-          </div>
+      {cargando ? (
+        <div className="text-center py-20 text-slate-400 font-bold text-xl animate-pulse">
+          Cargando el portal de UCICE...
+        </div>
+      ) : (
+        <div className="max-w-7xl mx-auto px-6 space-y-16 mt-12">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {noticias.map(n => (
-              <article key={n.id_noticia} className="bg-white border border-slate-200 rounded-2xl flex flex-col hover:shadow-xl transition-all overflow-hidden group">
-                {/* Aquí entra el carrusel */}
-                <CarruselNoticia portada={n.imagen_portada} galeria={n.galeria} />
-                
-                <div className="p-6 flex-1 flex flex-col">
-                  <h3 className="font-bold text-lg text-slate-800 mb-3 leading-tight group-hover:text-blue-700 transition-colors">{n.titulo}</h3>
-                  <p className="text-sm text-slate-600 mb-6 line-clamp-3 leading-relaxed">{n.contenido}</p>
-                  
-                  <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-black">
-                        {n.autor ? n.autor.charAt(0).toUpperCase() : 'U'}
-                      </div>
-                      <span className="text-xs font-bold text-slate-600">{n.autor || 'UCICE'}</span>
-                    </div>
-                    <span className="text-xs font-medium text-slate-400">{new Date(n.fecha_publicacion).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
+          {/* MÓDULO 1: ÚLTIMAS NOTICIAS (RESTAURADO A GRID) */}
+          <section>
+            <div className="flex justify-between items-center mb-6 border-b border-slate-200 pb-4">
+              <h2 className="text-2xl font-black text-[#1e293b] flex items-center gap-3">
+                <span className="text-slate-400">📰</span> Últimas Noticias
+              </h2>
+            </div>
 
-        {/* MITAD Y MITAD (Cursos y NODESS) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          
-          {/* COLUMNA CURSOS */}
-          <section className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="font-black text-2xl text-blue-900">🎓 Cursos</h2>
-              <Link to="/cursos" className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full hover:bg-blue-100">Ver todos</Link>
-            </div>
-            <div className="space-y-4">
-              {cursos.map(c => (
-                <div key={c.id_curso} className="p-5 rounded-2xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-md transition-all">
-                  <h4 className="font-black text-slate-800 mb-1">{c.titulo}</h4>
-                  <p className="text-sm text-slate-600 mb-4 line-clamp-2">{c.descripcion}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">Inicia: {new Date(c.fecha_inicio).toLocaleDateString()}</span>
-                    <Link to="/cursos" className="text-sm font-black text-blue-700 hover:underline">Inscribirme</Link>
+            {noticias.length === 0 ? (
+              <p className="text-slate-500 font-medium bg-white p-6 rounded-2xl border border-slate-200">No hay noticias publicadas.</p>
+            ) : (
+              // Aquí regresamos al grid estático que querías
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {noticias.map((n) => (
+                  <div 
+                    key={n.id_noticia} 
+                    onClick={() => setNoticiaSeleccionada(n)}
+                    className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all cursor-pointer flex flex-col h-full"
+                  >
+                    <div className="h-48 bg-slate-100 relative overflow-hidden">
+                      {n.imagen_portada ? (
+                        <img src={`http://localhost:3001${n.imagen_portada}`} alt={n.titulo} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-4xl">📰</div>
+                      )}
+                      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-md text-xs font-black text-[#1e3a8a] shadow-sm">
+                        {new Date(n.fecha_publicacion).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div className="p-6 flex flex-col flex-1">
+                      <h3 className="text-lg font-black text-slate-800 mb-2 leading-tight">
+                        {n.titulo}
+                      </h3>
+                      <p className="text-slate-500 text-sm mb-4">
+                        Por: {n.autor}
+                      </p>
+                      <p className="text-slate-500 text-sm leading-relaxed line-clamp-3 mb-6 flex-1">
+                        {n.contenido}
+                      </p>
+                      <div className="text-blue-600 text-sm font-bold">
+                        Leer más →
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
 
-          {/* COLUMNA NODESS */}
-          <section className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="font-black text-2xl text-blue-900">🤝 Red NODESS</h2>
-              <span className="text-xs font-bold text-slate-500">Economía Social</span>
+          {/* MÓDULO 2: CURSOS DE CAPACITACIÓN (RESTAURADO A GRID) */}
+          <section>
+            <div className="flex justify-between items-center mb-6 border-b border-slate-200 pb-4">
+              <h2 className="text-2xl font-black text-[#1e293b] flex items-center gap-3">
+                <span className="text-slate-400">🎓</span> Próximos Cursos
+              </h2>
+              <Link to="/mis-cursos" className="text-sm font-bold text-blue-600 hover:underline">Ver catálogo →</Link>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              {empresas.map(e => (
-                <div key={e.id_empresa} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center hover:border-blue-300 transition-colors">
-                  <div className="w-12 h-12 bg-blue-900 text-white rounded-xl flex items-center justify-center mx-auto mb-3 font-black text-xl shadow-inner">
-                    {e.nombre_comercial.charAt(0).toUpperCase()}
+
+            {cursos.length === 0 ? (
+              <p className="text-slate-500 font-medium bg-white p-6 rounded-2xl border border-slate-200">No hay cursos programados.</p>
+            ) : (
+              // Regresamos al grid para los cursos
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {cursos.map((c) => (
+                  <div key={c.id_curso} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col h-full">
+                    <span className="bg-[#dcfce7] text-[#166534] text-[10px] font-black uppercase px-2 py-1 rounded-md self-start mb-4">
+                      {c.estatus}
+                    </span>
+                    <h3 className="text-base font-black text-slate-800 mb-2">{c.titulo}</h3>
+                    <p className="text-sm text-slate-500 mb-6 flex-1">{c.descripcion}</p>
+                    <div className="pt-4 border-t border-slate-100 flex items-center gap-2">
+                      <span className="text-slate-400">📅</span>
+                      <span className="text-sm font-bold text-slate-500">
+                        {c.fecha_inicio ? new Date(c.fecha_inicio).toLocaleDateString() : 'Por definir'}
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-xs font-bold text-slate-800 line-clamp-2">{e.nombre_comercial}</p>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* MÓDULO 3: DIRECTORIO NODESS (RESTAURADO A GRID DE TARJETAS LARGAS) */}
+          <section>
+            <div className="flex justify-between items-center mb-6 border-b border-slate-200 pb-4">
+              <h2 className="text-2xl font-black text-[#1e293b] flex items-center gap-3">
+                <span className="text-slate-400">🤝</span> Red de Empresas NODESS
+              </h2>
             </div>
+
+            {nodess.length === 0 ? (
+              <p className="text-slate-500 font-medium bg-white p-6 rounded-2xl border border-slate-200">No hay empresas vinculadas aún.</p>
+            ) : (
+              // Grid de tarjetas tipo "banner" para empresas
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {nodess.map((emp) => (
+                  <div key={emp.id_empresa} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+                    <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">🏢</div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-black text-slate-800">{emp.nombre_comercial}</h3>
+                      <p className="text-xs text-slate-500 mt-1">Contacto: {emp.representante}</p>
+                      <p className="text-xs text-pink-600 mt-1 font-medium">📍 {emp.direccion}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
         </div>
-      </div>
+      )}
+
+      {/* PANTALLA MODAL DE LECTURA DE NOTICIA (BLOQUEO DE FONDO INCLUIDO) */}
+      {noticiaSeleccionada && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-center z-[100] p-4 sm:p-6 overflow-y-auto overscroll-contain">
+          
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-auto relative overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+            
+            <button 
+              onClick={() => setNoticiaSeleccionada(null)}
+              className="absolute top-4 right-4 z-10 w-10 h-10 bg-black/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center font-black transition-colors backdrop-blur-md"
+            >✕</button>
+
+            <div className="w-full h-48 bg-slate-100 relative">
+              {noticiaSeleccionada.imagen_portada ? (
+                <img src={`http://localhost:3001${noticiaSeleccionada.imagen_portada}`} alt="Portada" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-blue-900 text-white text-3xl font-black opacity-20">UCICE</div>
+              )}
+            </div>
+
+            <div className="p-6 sm:p-8 bg-white max-h-[60vh] overflow-y-auto">
+              <h2 className="text-2xl sm:text-3xl font-black leading-tight text-slate-800 mb-4">{noticiaSeleccionada.titulo}</h2>
+              
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-6">
+                <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-black text-xs">
+                  {noticiaSeleccionada.autor.charAt(0)}
+                </div>
+                <div>
+                  <p className="font-bold text-slate-700 text-sm">{noticiaSeleccionada.autor}</p>
+                  <p className="text-xs font-medium text-slate-400">{new Date(noticiaSeleccionada.fecha_publicacion).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap font-medium">
+                {noticiaSeleccionada.contenido}
+              </p>
+
+              {parsearGaleria(noticiaSeleccionada.galeria).length > 0 && (
+                <div className="mt-8 pt-6 border-t border-slate-100">
+                  <h3 className="text-sm font-black text-slate-800 mb-4">📸 Galería</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    {parsearGaleria(noticiaSeleccionada.galeria).map((imgRuta, idx) => (
+                      <a key={idx} href={`http://localhost:3001${imgRuta}`} target="_blank" rel="noopener noreferrer" className="block aspect-square rounded-xl overflow-hidden bg-slate-100 hover:opacity-90 ring-1 ring-slate-200">
+                        <img src={`http://localhost:3001${imgRuta}`} alt={`Galería ${idx}`} className="w-full h-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,71 +2,107 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Login() {
-  const [credenciales, setCredenciales] = useState({ correo: '', password: '' });
-  const [error, setError] = useState(null);
+  const [formulario, setFormulario] = useState({ correo: '', password: '' });
+  const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
   const [cargando, setCargando] = useState(false);
   const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    setFormulario({ ...formulario, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setCargando(true);
-    setError(null);
+    setMensaje({ texto: '', tipo: '' });
 
     try {
       const res = await fetch('http://localhost:3001/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credenciales)
+        body: JSON.stringify(formulario)
       });
-      
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
 
-      // GUARDADO PERMANENTE
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Credenciales incorrectas');
+
+      // 1. Guardamos la sesión en el navegador
       localStorage.setItem('token', data.token);
       localStorage.setItem('usuario', JSON.stringify(data.usuario));
 
+      // ==========================================
+      // 2. ENRUTAMIENTO INTELIGENTE (EL FIX)
+      // ==========================================
       if (data.usuario.rol === 'Admin') {
-        navigate('/admin');
+        navigate('/admin'); // El jefe va directo a su oficina
       } else {
-        navigate('/');
+        navigate('/'); // Los alumnos y maestros van al patio central
       }
 
-    } catch (err) {
-      setError(err.message);
-    } finally {
+    } catch (error) {
+      setMensaje({ texto: `❌ ${error.message}`, tipo: 'error' });
       setCargando(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="bg-white max-w-md w-full p-8 rounded-2xl shadow-xl border border-gray-100">
+    <div className="p-6 md:p-12 max-w-md mx-auto mt-10">
+      <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+        
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-900 text-white rounded-2xl flex items-center justify-center text-2xl font-black mx-auto mb-4 shadow-lg">U</div>
-          <h2 className="text-2xl font-black text-gray-800">Iniciar Sesión</h2>
-          <p className="text-sm text-gray-500 mt-1">Ingresa a tu cuenta UCICE</p>
+          <h1 className="text-3xl font-black text-slate-800">Iniciar Sesión</h1>
+          <p className="text-slate-500 font-medium mt-1">Accede a tu cuenta de UCICE</p>
         </div>
 
-        {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm text-center mb-6 font-medium border border-red-100">❌ {error}</div>}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Correo Electrónico</label>
-            <input type="email" required className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="tu@correo.com" onChange={e => setCredenciales({...credenciales, correo: e.target.value})} />
+        {mensaje.texto && (
+          <div className={`p-4 rounded-xl mb-6 font-bold text-sm text-center ${mensaje.tipo === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+            {mensaje.texto}
           </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Contraseña</label>
-            <input type="password" required className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••" onChange={e => setCredenciales({...credenciales, password: e.target.value})} />
+            <label className="block text-sm font-bold text-slate-700 mb-2">Correo Electrónico</label>
+            <input 
+              type="email" 
+              name="correo" 
+              required 
+              value={formulario.correo} 
+              onChange={handleChange} 
+              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
+              placeholder="ejemplo@ucice.edu.mx" 
+            />
           </div>
 
-          <button type="submit" disabled={cargando} className="w-full bg-blue-900 hover:bg-blue-800 text-white font-black py-3 rounded-lg shadow-lg transition-transform active:scale-95 disabled:bg-gray-400 mt-4">
-            {cargando ? 'VERIFICANDO...' : 'ENTRAR'}
-          </button>
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Contraseña</label>
+            <input 
+              type="password" 
+              name="password" 
+              required 
+              value={formulario.password} 
+              onChange={handleChange} 
+              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
+              placeholder="••••••••" 
+            />
+          </div>
+
+          <div className="pt-2">
+            <button 
+              type="submit" 
+              disabled={cargando} 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-md transition-all active:scale-95 disabled:bg-slate-400"
+            >
+              {cargando ? 'VERIFICANDO...' : 'INGRESAR'}
+            </button>
+          </div>
         </form>
         
-        <div className="text-center mt-6">
-          <p className="text-sm text-gray-600">¿No tienes cuenta? <Link to="/registro" className="text-blue-600 hover:underline font-bold">Regístrate aquí</Link></p>
+        <div className="mt-8 pt-6 border-t border-slate-100 text-center">
+          <Link to="/" className="text-sm font-bold text-slate-400 hover:text-blue-600 transition-colors">
+            ← Regresar al Inicio
+          </Link>
         </div>
       </div>
     </div>

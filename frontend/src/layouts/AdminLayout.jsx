@@ -1,15 +1,19 @@
-// src/layouts/AdminLayout.jsx
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 
 export default function AdminLayout() {
   return (
-    <div className="flex min-h-screen bg-gray-100 font-sans">
+    // Agregamos overscroll-none al contenedor padre absoluto
+    <div className="flex h-screen w-full bg-slate-50 overflow-hidden overscroll-none">
+      
+      {/* EL SIDEBAR: Congelado a la izquierda */}
       <Sidebar />
-      <main className="flex-1 p-8 overflow-y-auto">
-        {/* Aquí adentro cambiarán las pantallas del Dashboard, Mercadito, etc. */}
+      
+      {/* EL CONTENIDO PRINCIPAL: Único con permiso de hacer scroll vertical, pero le prohibimos el rebote (overscroll-none) */}
+      <div className="flex-1 h-full overflow-y-auto overscroll-none relative">
         <Outlet />
-      </main>
+      </div>
+      
     </div>
   );
 }

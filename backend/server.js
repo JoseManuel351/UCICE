@@ -22,10 +22,10 @@ const db = mysql.createConnection({
 
 db.connect((err) => {
     if (err) {
-        console.error('❌ Error fatal al conectar a la base de datos:', err.message);
+        console.error('Error fatal al conectar a la base de datos:', err.message);
         return;
     }
-    console.log('✅ Conexión exitosa a la base de datos: sistema_ucice');
+    console.log('Conexión exitosa a la base de datos: sistema_ucice');
 });
 
 // ==========================================
@@ -134,7 +134,7 @@ app.put('/api/nodess/estatus/:id', (req, res) => {
 });
 
 // ==========================================
-// NOTICIAS
+// NOTICIAS (CON RUTA DE EDICIÓN AÑADIDA)
 // ==========================================
 const storageNoticias = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/noticias/'),
@@ -153,12 +153,22 @@ app.post('/api/noticias', uploadNoticias.array('imagenes', 10), (req, res) => {
     
     db.query(`INSERT INTO noticias_micrositio (id_usuario_autor, titulo, contenido, imagen_portada, estatus) VALUES (?, ?, ?, ?, ?)`, 
     [id_usuario_autor, titulo, contenido, rutaPortada, estatus || 'Borrador'], (err, results) => {
-        if (err) return res.status(500).json({ error: 'Error' });
+        if (err) return res.status(500).json({ error: 'Error al guardar' });
         if (req.files && req.files.length > 1) { 
             const valoresGaleria = req.files.slice(1).map(file => [results.insertId, `/uploads/noticias/${file.filename}`]);
             db.query(`INSERT INTO galeria_noticias (id_noticia, ruta_archivo) VALUES ?`, [valoresGaleria]);
         }
         res.json({ mensaje: 'Publicada' });
+    });
+});
+
+// NUEVA RUTA: Editar noticia existente (solo texto y estatus)
+app.put('/api/noticias/:id', (req, res) => {
+    const { titulo, contenido, estatus } = req.body;
+    db.query(`UPDATE noticias_micrositio SET titulo = ?, contenido = ?, estatus = ? WHERE id_noticia = ?`, 
+    [titulo, contenido, estatus, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: 'Error al actualizar la noticia' });
+        res.json({ mensaje: 'Noticia actualizada con éxito' });
     });
 });
 
@@ -193,7 +203,7 @@ app.put('/api/evidencias/estatus/:id', (req, res) => {
 });
 
 // ==========================================
-// MERCADITO (INTELIGENTE: BUSCA O CREA ESTUDIANTE)
+// MERCADITO 
 // ==========================================
 const storageMercadito = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/mercadito/'),
@@ -222,42 +232,29 @@ app.post('/api/mercadito/registro', uploadMercadito.single('imagen'), (req, res)
     
     const rutaImagen = req.file ? `/uploads/mercadito/${req.file.filename}` : null;
 
-    // Función auxiliar para continuar el registro una vez que tenemos el ID del estudiante
     const continuarRegistro = (idEstudiante) => {
         db.query(`INSERT INTO emprendimientos (id_estudiante, nombre_emprendimiento, tipo_producto_servicio, descripcion_venta, redes_sociales, imagen_producto) VALUES (?, ?, ?, ?, ?, ?)`, 
         [idEstudiante, nombre_emprendimiento, tipo_producto_servicio, descripcion_venta, redes_sociales, rutaImagen], (err, resEmp) => {
-            if (err) {
-                console.error('❌ Error SQL en emprendimientos:', err.message);
-                return res.status(500).json({ error: 'Error al registrar emprendimiento' });
-            }
+            if (err) return res.status(500).json({ error: 'Error al registrar emprendimiento' });
             const idEmprendimiento = resEmp.insertId;
             
             db.query(`INSERT INTO solicitudes_mercadito (id_emprendimiento, cantidad_mesas, requiere_electricidad, lleva_estructura, descripcion_estructura, estatus_solicitud) VALUES (?, ?, ?, ?, ?, 'Pendiente')`, 
             [idEmprendimiento, cantidad_mesas, requiere_electricidad, lleva_estructura, descripcion_estructura], (err) => {
-                if (err) {
-                    console.error('❌ Error SQL en solicitudes:', err.message);
-                    return res.status(500).json({ error: 'Error al registrar logística' });
-                }
+                if (err) return res.status(500).json({ error: 'Error al registrar logística' });
                 res.json({ mensaje: 'Solicitud enviada' });
             });
         });
     };
 
-    // PASO 1: Buscar si el estudiante ya existe por su correo
     db.query('SELECT id_estudiante FROM estudiantes WHERE correo_estudiante = ?', [correo_estudiante], (err, results) => {
         if (err) return res.status(500).json({ error: 'Error al consultar estudiante' });
 
         if (results.length > 0) {
-            // El estudiante YA EXISTE, usamos su ID
             continuarRegistro(results[0].id_estudiante);
         } else {
-            // El estudiante NO EXISTE, lo creamos nuevo
             db.query(`INSERT INTO estudiantes (id_carrera, nombre_completo, correo_estudiante, numero_contacto) VALUES (?, ?, ?, ?)`, 
             [id_carrera, nombre_completo, correo_estudiante, numero_contacto], (err, resEst) => {
-                if (err) {
-                    console.error('❌ Error SQL en estudiantes:', err.message);
-                    return res.status(500).json({ error: 'Error al registrar estudiante' });
-                }
+                if (err) return res.status(500).json({ error: 'Error al registrar estudiante' });
                 continuarRegistro(resEst.insertId);
             });
         }
@@ -274,5 +271,5 @@ app.put('/api/mercadito/rechazar/:id', (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor Backend corriendo en http://localhost:${PORT}`);
+    console.log(`Servidor Backend corriendo en http://localhost:${PORT}`);
 });

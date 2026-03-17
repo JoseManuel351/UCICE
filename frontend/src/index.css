@@ -1,7 +1,37 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@keyframes fadeIn {
-  from { opacity: 0.5; }
-  to { opacity: 1; }
+
+/* ==========================================
+   REGLAS GLOBALES DE EXPERIENCIA DE USUARIO
+   ========================================== */
+
+/* 1. Desactivar el efecto "rebote" (Overscroll Bounce) en toda la aplicación */
+html, body {
+  overscroll-behavior: none;
+  background-color: #f8fafc; /* Equivalente a bg-slate-50 para que el fondo no desentone si llega a verse */
+}
+
+/* 2. Suavizar el scroll en anclajes */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 3. Personalizar la barra de desplazamiento (Scrollbar) para que se vea más profesional (Opcional pero recomendado para Dashboards) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* slate-300 */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; /* slate-400 */
 }
